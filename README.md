@@ -1,52 +1,88 @@
-# Gestor de Tareas - Prueba Técnica Nwoork
+# TimeOff Manager - Nwoork Technical Test
 
-## Descripción
+## Description
 
-Aplicación para gestionar tareas, requerimientos crear, completar, filtrar y eliminar tareas
-Backend hecho en .Net 6.0 y Frontend con framework React y TypeScript
+A web application to manage employee time-off requests. It allows users to register, log in, create time-off requests, view and filter them by status.  
+The backend is built with .NET 6.0 and SQLite, while the frontend uses React with TypeScript.
 
-## Tecnologías usadas
+## Technologies Used
 
-Backend: .Net Core 6.0
-Frontend: React con TypeScript
-Comunicación API: REST
-CORS configurado para desarollo local
-Axios para llamadas HTTP
-Vite como blunder frontend
-Swashbuckle (Swagger) para documentación automática de endpoints
+**Backend:**
+- .NET 6.0
+- Entity Framework Core (SQLite)
+- JWT for authentication
+- Swagger (Swashbuckle) for API documentation
+- BCrypt for password hashing
 
-## Requisitos previos
-.NET 6 SDK (https://dotnet.microsoft.com/download/dotnet/6.0) instalado en tu equipo
-.Node js y npm/yarn instalados
+**Frontend:**
+- React 19 + TypeScript
+- Vite as build tool
+- Axios for HTTP requests
+- React Router DOM for routing
+- Formik + Yup for form validation
+- TailwindCSS for styling
+- Heroicons and React Icons for icons
+- date-fns for date management
 
-## Configuración y variables de entorno
-El proyecto utiliza un archivo .env para configurar la url base de la API en frontend
+**API Communication:** REST  
+**CORS:** Configured for local development
 
-1.- Copiar el archivo .env.example a .env y modificar si es necesario
+## Prerequisites
 
-2.- Backend corre en `http://localhost:5000`  
+- [.NET 6 SDK](https://dotnet.microsoft.com/download/dotnet/6.0)
+- Node.js and npm (or yarn)
 
-3.- Frontend corre en `http://localhost:5173`  
+## Environment Configuration
 
+The frontend uses a `.env` file to define the backend base URL.
 
-## Instrucciones para ejecutar el proyecto
+1. Copy `.env.example` to `.env` and adjust the API URL if needed
+
+2. Backend runs by default at `http://localhost:5000`
+
+3. Frontend runs by default at `http://localhost:5173`
+
+## How to Run the Project
 
 ### Backend
-cd backend
+
+
+cd backend/TimeOffManager
 dotnet run
 
 ### Frontend
+
+cd frontend
 npm install
 npm run dev
 
-## Endpoints principales API
+### API Enpoints
 
-GET /api/tasks — Obtener todas las tareas
+Full documentation available at: http://localhost:5000/swagger
 
-GET /api/tasks/filter?completed=true|false — Filtrar tareas por estado
+## Authentication
 
-POST /api/tasks — Crear nueva tarea
+POST /api/Auth/register — Register a new user
 
-PUT /api/tasks/{id}/toggle — Cambiar estado completado
+POST /api/Auth/login — Log in with credentials
 
-DELETE /api/tasks/{id} — Eliminar tarea
+## Users
+GET /api/User — Get a list of users
+
+GET /api/User/{id} — Get user details
+
+PUT /api/User/{id} — Update user data
+
+DELETE /api/User/{id} — Delete a user
+
+## Time Off Requests
+
+GET /api/TimeOffRequest — List time-off requests
+
+POST /api/TimeOffRequest — Create a new request
+
+PUT /api/TimeOffRequest/{id} — Edit a request
+
+DELETE /api/TimeOffRequest/{id} — Delete a request
+
+GET /api/TimeOffRequest/filter?status=pending|approved|rejected — Filter by status

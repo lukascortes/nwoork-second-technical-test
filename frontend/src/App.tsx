@@ -1,84 +1,39 @@
-import { useEffect, useState } from "react";
-import TaskForm from "./components/TaskForm";
-import TaskList from "./components/TaskList";
-import FilterBar from "./components/FilterBar";
+// src/App.tsx
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from './pages/Login/LoginPage';
+import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
+import EmployeeDashboard from './pages/EmployeeDashboard/EmployeeDashboard';
+import ProtectedRoute from './components/common/ProtectedRoute';
+import UnauthorizedPage from './pages/UnauthorizedPage';
+import UsersPage from './pages/admin/UsersPage';
 
-import {
-  getTasks,
-  createTask,
-  deleteTask,
-  toggleTask,
-  getFilteredTasks,
-} from "./api";
-
-type Task = {
-  id: string;
-  title: string;
-  description: string;
-  isCompleted: boolean;
-};
-
-export default function App() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [filter, setFilter] = useState<"all" | "completed" | "pending">("all");
-
-  const fetchTasks = async () => {
-    try {
-      if (filter === "all") {
-        const res = await getTasks();
-        setTasks(res.data);
-      } else {
-        const completed = filter === "completed";
-        const res = await getFilteredTasks(completed);
-        setTasks(res.data);
-      }
-    } catch (error) {
-      console.error("Error al obtener tareas:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchTasks();
-  }, [filter]);
-
-  const handleCreate = async (title: string, description: string) => {
-    try {
-      await createTask({ title, description });
-      fetchTasks();
-    } catch (error) {
-      console.error("Error al crear tarea:", error);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteTask(id);
-      fetchTasks();
-    } catch (error) {
-      console.error("Error al eliminar tarea:", error);
-    }
-  };
-
-  const handleToggle = async (id: string) => {
-    try {
-      await toggleTask(id);
-      await fetchTasks();
-      const res = await getTasks();
-      console.log(res.data);  // para verificar estado en consola
-      setTasks(res.data);
-    } catch (error) {
-      console.error("Error al cambiar estado:", error);
-    }
-  };
-
+function App() {
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow">
-        <h1 className="text-3xl font-bold mb-4 text-center">Gestor de Tareas</h1>
-        <TaskForm onCreate={handleCreate} />
-        <FilterBar onFilterChange={(value) => setFilter(value)} />
-        <TaskList tasks={tasks} onDelete={handleDelete} onToggle={handleToggle} />
-      </div>
-    </div>
+    <Router>
+      <Routes>
+      
+        <Route path="/login" element={<LoginPage />} />
+        
+        
+        <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
+          <Route path="/dashboard/admin" element={<AdminDashboard />} />
+          <Route path="/dashboard/admin/users" element={<UsersPage />} />
+        </Route>
+        
+       
+        <Route element={<ProtectedRoute allowedRoles={['Employee']} />}>
+          <Route path="/dashboard/employee" element={<EmployeeDashboard />} />
+        </Route>
+        
+       
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        
+        
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </Router>
   );
 }
+
+export default App;
