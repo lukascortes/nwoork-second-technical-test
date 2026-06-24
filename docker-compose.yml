@@ -1,0 +1,42 @@
+name: timeoff-manager
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: timeoff-db
+    environment:
+      POSTGRES_USER: timeoff
+      POSTGRES_PASSWORD: timeoff
+      POSTGRES_DB: timeoffmanager
+    ports:
+      - "5432:5432"
+    volumes:
+      - timeoff-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timeoff -d timeoffmanager"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: timeoff-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=timeoffmanager;Username=timeoff;Password=timeoff"
+      # Demo-only signing key. In real deployments inject this from a secret store.
+      Jwt__Key: "compose-demo-signing-key-please-override-0123456789"
+      Jwt__Issuer: "TimeOffManager"
+      Jwt__Audience: "TimeOffManager.Clients"
+      Cors__AllowedOrigins__0: "http://localhost:5173"
+    ports:
+      - "5000:8080"
+
+volumes:
+  timeoff-pgdata:
