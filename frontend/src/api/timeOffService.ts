@@ -1,10 +1,15 @@
 import apiClient from './apiClient';
 import { getApiErrorMessage } from './errors';
-import type { TimeOffRequest, RequestStatus, CreateTimeOffRequest, VacationBalance } from '../types/requestTypes';
+import type { TimeOffRequest, RequestStatus, CreateTimeOffRequest, VacationBalance, RequestStats } from '../types/requestTypes';
 
 export const timeOffService = {
   getAllRequests: async (): Promise<TimeOffRequest[]> => {
     const { data } = await apiClient.get<TimeOffRequest[]>('/timeoffrequests');
+    return data;
+  },
+
+  getStats: async (): Promise<RequestStats> => {
+    const { data } = await apiClient.get<RequestStats>('/timeoffrequests/stats');
     return data;
   },
 
