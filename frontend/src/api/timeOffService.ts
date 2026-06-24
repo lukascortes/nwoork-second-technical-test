@@ -1,6 +1,6 @@
 import apiClient from './apiClient';
 import { getApiErrorMessage } from './errors';
-import type { TimeOffRequest, RequestStatus, CreateTimeOffRequest } from '../types/requestTypes';
+import type { TimeOffRequest, RequestStatus, CreateTimeOffRequest, VacationBalance } from '../types/requestTypes';
 
 export const timeOffService = {
   getAllRequests: async (): Promise<TimeOffRequest[]> => {
@@ -10,6 +10,11 @@ export const timeOffService = {
 
   getMyRequests: async (): Promise<TimeOffRequest[]> => {
     const { data } = await apiClient.get<TimeOffRequest[]>('/timeoffrequests/me');
+    return data;
+  },
+
+  getMyBalance: async (): Promise<VacationBalance> => {
+    const { data } = await apiClient.get<VacationBalance>('/timeoffrequests/balance');
     return data;
   },
 
