@@ -3,18 +3,18 @@ import { CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/out
 
 interface RequestsTableProps {
   requests: TimeOffRequest[];
-  onStatusChange?: (id: number, status: RequestStatus) => void;
+  onStatusChange?: (id: string, status: RequestStatus) => void;
   isAdmin?: boolean;
   loading?: boolean;
   error?: string | null;
 }
 
-export default function RequestsTable({ 
-  requests = [], 
-  onStatusChange, 
+export default function RequestsTable({
+  requests = [],
+  onStatusChange,
   isAdmin = false,
   loading = false,
-  error = null
+  error = null,
 }: RequestsTableProps) {
   if (loading) return (
     <div className="flex justify-center py-8">
@@ -34,27 +34,16 @@ export default function RequestsTable({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-purple-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">
-                Dates
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">
-                Reason
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">
-                Status
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">Dates</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">Days</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">Reason</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">Status</th>
               {isAdmin && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">
-                  User
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">Employee</th>
               )}
               {isAdmin && onStatusChange && (
-                <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">Actions</th>
               )}
             </tr>
           </thead>
@@ -66,6 +55,9 @@ export default function RequestsTable({
                     {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {request.totalDays}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {request.type}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
@@ -75,18 +67,12 @@ export default function RequestsTable({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      {request.status === 'Approved' && (
-                        <CheckCircleIcon className="h-4 w-4 text-green-500 mr-1" />
-                      )}
-                      {request.status === 'Rejected' && (
-                        <XCircleIcon className="h-4 w-4 text-red-500 mr-1" />
-                      )}
-                      {request.status === 'Pending' && (
-                        <ClockIcon className="h-4 w-4 text-yellow-500 mr-1" />
-                      )}
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${request.status === 'Approved' ? 'bg-green-100 text-green-800' : 
-                          request.status === 'Rejected' ? 'bg-red-100 text-red-800' : 
+                      {request.status === 'Approved' && <CheckCircleIcon className="h-4 w-4 text-green-500 mr-1" />}
+                      {request.status === 'Rejected' && <XCircleIcon className="h-4 w-4 text-red-500 mr-1" />}
+                      {request.status === 'Pending' && <ClockIcon className="h-4 w-4 text-yellow-500 mr-1" />}
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                        ${request.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                          request.status === 'Rejected' ? 'bg-red-100 text-red-800' :
                           'bg-yellow-100 text-yellow-800'}`}>
                         {request.status}
                       </span>
@@ -94,7 +80,8 @@ export default function RequestsTable({
                   </td>
                   {isAdmin && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {request.user?.email}
+                      <div className="font-medium text-gray-900">{request.user?.fullName}</div>
+                      <div className="text-xs text-gray-500">{request.user?.email}</div>
                     </td>
                   )}
                   {isAdmin && onStatusChange && request.status === 'Pending' && (
@@ -117,10 +104,8 @@ export default function RequestsTable({
               ))
             ) : (
               <tr>
-                <td colSpan={isAdmin ? 6 : 4} className="px-6 py-8 text-center">
-                  <div className="text-gray-500">
-                    No time off requests found
-                  </div>
+                <td colSpan={isAdmin ? 7 : 5} className="px-6 py-8 text-center">
+                  <div className="text-gray-500">No time off requests found</div>
                 </td>
               </tr>
             )}

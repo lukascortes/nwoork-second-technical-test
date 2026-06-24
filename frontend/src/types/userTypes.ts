@@ -1,32 +1,26 @@
-
-export const Role = {
-  Admin: 'Admin',
-  Employee: 'Employee'
-} as const;
-
-export type Role = keyof typeof Role;
-
+export type Role = 'Admin' | 'Employee';
 
 export interface User {
-  id: number;
+  id: string;
   email: string;
+  fullName: string;
   role: Role;
+  annualVacationDays: number;
+  createdAt: string;
 }
 
 export interface UserCreateDto {
   email: string;
   password: string;
+  fullName: string;
   role: Role;
+  annualVacationDays?: number;
 }
 
 export interface UserUpdateDto {
   email?: string;
   password?: string;
+  fullName?: string;
   role?: Role;
+  annualVacationDays?: number;
 }
-
-export type UserUpdateDtoRole = {
-  email?: string;
-  password?: string;
-  role: 0 | 1;
-};

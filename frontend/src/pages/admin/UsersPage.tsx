@@ -16,14 +16,13 @@ import {
 export default function UsersPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [successMessage, setSuccessMessage] = useState('');
   const userManagement = useUserManagement();
   const { users = [], loading, error, fetchUsers, deleteUser } = userManagement;
 
   const handleSuccess = () => {
     setIsFormOpen(false);
-    setRefreshKey(prev => prev + 1);
+    fetchUsers();
     setSuccessMessage('User operation completed successfully!');
     setTimeout(() => setSuccessMessage(''), 3000);
   };
@@ -105,7 +104,6 @@ export default function UsersPage() {
 
             {users.length > 0 ? (
               <UserList
-                key={refreshKey}
                 onEdit={handleEdit}
                 users={users}
                 loading={loading}

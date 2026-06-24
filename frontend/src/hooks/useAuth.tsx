@@ -1,65 +1,48 @@
-import { useState, useEffect, useContext, createContext } from 'react';
+import { useState, useContext, createContext } from 'react';
 import { authService } from '../api/authService';
-import type { AuthContextType } from '../types/authTypes';
+import type { AuthContextType, UserRole } from '../types/authTypes';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return !!localStorage.getItem('token');
-  });
-  
-  const [role, setRole] = useState<'Admin' | 'Employee' | null>(() => {
-    const storedRole = localStorage.getItem('userRole');
-    return storedRole as 'Admin' | 'Employee' | null;
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('token'));
+  const [role, setRole] = useState<UserRole | null>(
+    () => localStorage.getItem('userRole') as UserRole | null
+  );
+  const [userId, setUserId] = useState<string | null>(() => localStorage.getItem('userId'));
+  const [fullName, setFullName] = useState<string | null>(() => localStorage.getItem('fullName'));
 
-  
-  const [userId, setUserId] = useState<number | null>(() => {
-    const storedUserId = localStorage.getItem('userId');
-    return storedUserId ? parseInt(storedUserId) : null;
-  });
-
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<UserRole | null> => {
     try {
-      
-      const { token, role, id } = await authService.login({ email, password });
-      
-      
-      localStorage.setItem('token', token);
-      localStorage.setItem('userRole', role);
-      localStorage.setItem('userId', id.toString()); 
-      
+      const res = await authService.login({ email, password });
+
+      localStorage.setItem('token', res.accessToken);
+      localStorage.setItem('userRole', res.role);
+      localStorage.setItem('userId', res.userId);
+      localStorage.setItem('fullName', res.fullName);
+
       setIsAuthenticated(true);
-      setRole(role as 'Admin' | 'Employee');
-      setUserId(id); 
-      
-      return true;
+      setRole(res.role);
+      setUserId(res.userId);
+      setFullName(res.fullName);
+
+      return res.role;
     } catch (error) {
       console.error('Login failed:', error);
-      return false;
+      return null;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userId'); 
+    authService.logout();
     setIsAuthenticated(false);
     setRole(null);
-    setUserId(null); 
+    setUserId(null);
+    setFullName(null);
   };
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        isAuthenticated, 
-        role, 
-        userId, 
-        login, 
-        logout 
-      }}
-    >
+    <AuthContext.Provider value={{ isAuthenticated, role, userId, fullName, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

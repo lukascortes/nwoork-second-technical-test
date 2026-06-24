@@ -6,7 +6,6 @@ import RequestsTable from '../../components/requests/RequestsTable';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import RequestFormContainer from '../../components/requests/RequestForm/RequestFormContainer';
-import { convertTypeToNumber } from '../../utils/requestConverters';
 import type { TimeOffType } from '../../types/requestTypes';
 
 import {
@@ -53,73 +52,21 @@ export default function EmployeeDashboard() {
     type: TimeOffType;
     reason?: string;
   }) => {
-    setError(''); 
-    setSuccessMessage(''); 
-    const hasOverlappingRequest = requests.some(request => {
-      const newStart = new Date(requestData.startDate);
-      const newEnd = new Date(requestData.endDate);
-      const existingStart = new Date(request.startDate);
-      const existingEnd = new Date(request.endDate);
-
-      return (
-        (request.status === 'Pending' || request.status === 'Approved') &&
-        ((newStart >= existingStart && newStart <= existingEnd) ||
-          (newEnd >= existingStart && newEnd <= existingEnd) ||
-          (newStart <= existingStart && newEnd >= existingEnd))
-      );
-    });
-
-    if (hasOverlappingRequest) {
-      setError('Ya tienes una solicitud aprobada/pendiente para estas fechas');
-      return;
-    }
+    setError('');
+    setSuccessMessage('');
     try {
-      const userId = Number(localStorage.getItem('userId'));
-      if (!userId) throw new Error('User not authenticated');
-
-      const backendRequest = {
-        userId,
-        startDate: new Date(requestData.startDate).toISOString(),
-        endDate: new Date(requestData.endDate).toISOString(),
-        type: convertTypeToNumber(requestData.type),
+      // The server assigns the owner (from the JWT) and status; we only send the request data.
+      const created = await timeOffService.createRequest({
+        startDate: requestData.startDate,
+        endDate: requestData.endDate,
+        type: requestData.type,
         reason: requestData.reason || null,
-        status: 1 
-      };
-
-      const newRequest = await timeOffService.createRequest(backendRequest);
-      setRequests([...requests, newRequest]);
+      });
+      setRequests((prev) => [created, ...prev]);
       setSuccessMessage('Request created successfully!');
-
-    } catch (error: unknown) {
-      let errorMessage = 'Error al crear la solicitud';
-
-      
-      if (typeof error === 'object' && error !== null && 'response' in error) {
-        const axiosError = error as {
-          response?: {
-            data?: string | { message?: string };
-            status?: number;
-          }
-        };
-
-        
-        if (typeof axiosError.response?.data === 'string') {
-          errorMessage = axiosError.response.data;
-        }
-       
-        else if (axiosError.response?.data && typeof axiosError.response.data === 'object') {
-          errorMessage = axiosError.response.data.message || errorMessage;
-        }
-      }
-    
-      else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      setError(errorMessage);
-
-    
-      console.error('Detalles del error:', error);
+      setActiveTab('requests');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error creating request');
     }
   };
   if (loading) return <LoadingSpinner />;

@@ -4,11 +4,11 @@ import UserActions from './UserActions';
 import type { User } from '../../../types/userTypes';
 
 interface UserListProps {
-  onEdit: (user: any) => void;
-  users?: User[]; 
+  onEdit: (user: User) => void;
+  users?: User[];
   loading: boolean;
   error: string | null;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 export default function UserList({ 
   onEdit, 
@@ -47,7 +47,7 @@ export default function UserList({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-purple-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">Role</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-purple-800 uppercase tracking-wider">Actions</th>
@@ -56,7 +56,7 @@ export default function UserList({
           <tbody className="bg-white divide-y divide-gray-200">
             {currentUsers.map((user) => (
               <tr key={user.id} className="hover:bg-purple-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.id}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.fullName}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
