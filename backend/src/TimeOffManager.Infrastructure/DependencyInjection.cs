@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TimeOffManager.Application.Common.Interfaces;
+using TimeOffManager.Infrastructure.Email;
+using TimeOffManager.Infrastructure.Messaging;
 using TimeOffManager.Infrastructure.Persistence;
 using TimeOffManager.Infrastructure.Persistence.Repositories;
 using TimeOffManager.Infrastructure.Security;
@@ -11,7 +13,10 @@ namespace TimeOffManager.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        bool registerHostedServices = true)
     {
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Connection string 'Default' is not configured.");
@@ -33,6 +38,17 @@ public static class DependencyInjection
             .Validate(o => o.AccessTokenMinutes > 0,
                 "Jwt:AccessTokenMinutes must be a positive value.")
             .ValidateOnStart();
+
+        // Messaging (RabbitMQ) + email (SMTP / MailHog)
+        services.AddOptions<RabbitMqOptions>().Bind(configuration.GetSection(RabbitMqOptions.SectionName));
+        services.AddOptions<SmtpOptions>().Bind(configuration.GetSection(SmtpOptions.SectionName));
+        services.AddSingleton<RabbitMqConnection>();
+        services.AddSingleton<IMessagePublisher, RabbitMqMessagePublisher>();
+        services.AddSingleton<IEmailSender, SmtpEmailSender>();
+
+        // The consumer (background worker) is skipped under the integration-test host.
+        if (registerHostedServices)
+            services.AddHostedService<EmailNotificationConsumer>();
 
         return services;
     }

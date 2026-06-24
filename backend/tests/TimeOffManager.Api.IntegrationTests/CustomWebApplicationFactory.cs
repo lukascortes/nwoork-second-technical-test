@@ -31,6 +31,10 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             _connection.Open(); // keep the in-memory DB alive for the factory's lifetime
             services.AddDbContext<AppDbContext>(options => options.UseSqlite(_connection));
+
+            // Don't touch RabbitMQ during tests — swap the publisher for a no-op.
+            services.RemoveAll(typeof(IMessagePublisher));
+            services.AddSingleton<IMessagePublisher, NoOpMessagePublisher>();
         });
     }
 

@@ -18,7 +18,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ── Application + Infrastructure ────────────────────────────────────────────
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(
+    builder.Configuration,
+    registerHostedServices: !builder.Environment.IsEnvironment("Testing"));
 
 // ── Controllers + JSON (enums as strings, not magic numbers) ────────────────
 builder.Services

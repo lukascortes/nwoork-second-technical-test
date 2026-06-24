@@ -1,6 +1,7 @@
 using FluentValidation;
 using TimeOffManager.Application.Common.Exceptions;
 using TimeOffManager.Application.Common.Interfaces;
+using TimeOffManager.Application.Notifications;
 using TimeOffManager.Domain.Entities;
 using TimeOffManager.Domain.Enums;
 using TimeOffManager.Domain.ValueObjects;
@@ -13,6 +14,7 @@ public sealed class TimeOffRequestService : ITimeOffRequestService
     private readonly IUserRepository _users;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDateTimeProvider _clock;
+    private readonly IMessagePublisher _publisher;
     private readonly IValidator<CreateTimeOffRequestRequest> _createValidator;
     private readonly IValidator<UpdateRequestStatusRequest> _updateStatusValidator;
 
@@ -21,6 +23,7 @@ public sealed class TimeOffRequestService : ITimeOffRequestService
         IUserRepository users,
         IUnitOfWork unitOfWork,
         IDateTimeProvider clock,
+        IMessagePublisher publisher,
         IValidator<CreateTimeOffRequestRequest> createValidator,
         IValidator<UpdateRequestStatusRequest> updateStatusValidator)
     {
@@ -28,6 +31,7 @@ public sealed class TimeOffRequestService : ITimeOffRequestService
         _users = users;
         _unitOfWork = unitOfWork;
         _clock = clock;
+        _publisher = publisher;
         _createValidator = createValidator;
         _updateStatusValidator = updateStatusValidator;
     }
@@ -104,11 +108,37 @@ public sealed class TimeOffRequestService : ITimeOffRequestService
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await PublishReviewedNotificationAsync(entity, cancellationToken);
+
         return TimeOffRequestDto.FromEntity(entity);
     }
 
-    /// <summary>Blocks approval of a vacation request that would push the employee
-    /// over their annual allowance.</summary>
+    /// <summary>Best-effort: enqueue an email notification. A messaging failure must
+    /// never fail the review operation itself.</summary>
+    private async Task PublishReviewedNotificationAsync(TimeOffRequest entity, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var user = await _users.GetByIdAsync(entity.UserId, cancellationToken);
+            if (user is null)
+                return;
+
+            var notification = new RequestReviewedNotification(
+                user.Email,
+                user.FullName,
+                entity.Type.ToString(),
+                entity.StartDate,
+                entity.EndDate,
+                entity.Status.ToString());
+
+            await _publisher.PublishAsync(notification, cancellationToken);
+        }
+        catch
+        {
+            // Notifications are best-effort; swallow so the review still succeeds.
+        }
+    }
+
     private async Task EnsureWithinVacationAllowanceAsync(TimeOffRequest request, CancellationToken cancellationToken)
     {
         if (request.Type != LeaveType.Vacation)

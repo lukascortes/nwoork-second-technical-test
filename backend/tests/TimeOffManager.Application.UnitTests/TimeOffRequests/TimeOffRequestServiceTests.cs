@@ -20,9 +20,10 @@ public class TimeOffRequestServiceTests
     private readonly IUserRepository _users = Substitute.For<IUserRepository>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly IDateTimeProvider _clock = new FixedClock(Today);
+    private readonly IMessagePublisher _publisher = Substitute.For<IMessagePublisher>();
 
     private TimeOffRequestService CreateSut() => new(
-        _repo, _users, _uow, _clock,
+        _repo, _users, _uow, _clock, _publisher,
         new CreateTimeOffRequestValidator(_clock),
         new UpdateRequestStatusValidator());
 
