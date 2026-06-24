@@ -11,6 +11,9 @@ public interface ITimeOffRequestRepository
     /// <summary>All requests including their <see cref="User"/> (admin view), newest first.</summary>
     Task<IReadOnlyList<TimeOffRequest>> GetAllWithUsersAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>All requests without navigation data (for aggregate stats).</summary>
+    Task<IReadOnlyList<TimeOffRequest>> GetAllAsync(CancellationToken cancellationToken = default);
+
     /// <summary>True if the user already has a non-rejected request of the same type
     /// whose date range intersects [start, end].</summary>
     Task<bool> HasOverlapAsync(

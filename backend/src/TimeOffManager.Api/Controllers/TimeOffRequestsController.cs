@@ -49,6 +49,12 @@ public sealed class TimeOffRequestsController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<TimeOffRequestDto>>> GetAll(CancellationToken cancellationToken)
         => Ok(await _requests.GetAllAsync(cancellationToken));
 
+    /// <summary>Admin metrics: aggregate request counts by status and type.</summary>
+    [HttpGet("stats")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<RequestStatsDto>> GetStats(CancellationToken cancellationToken)
+        => Ok(await _requests.GetStatsAsync(cancellationToken));
+
     /// <summary>Admin approves or rejects a pending request.</summary>
     [HttpPut("{id:guid}/status")]
     [Authorize(Roles = "Admin")]

@@ -28,6 +28,9 @@ public sealed class TimeOffRequestRepository : ITimeOffRequestRepository
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<TimeOffRequest>> GetAllAsync(CancellationToken cancellationToken = default)
+        => await _db.TimeOffRequests.AsNoTracking().ToListAsync(cancellationToken);
+
     public Task<bool> HasOverlapAsync(
         Guid userId,
         LeaveType type,

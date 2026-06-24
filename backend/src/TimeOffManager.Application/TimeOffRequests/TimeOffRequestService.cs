@@ -68,6 +68,19 @@ public sealed class TimeOffRequestService : ITimeOffRequestService
         return items.Select(TimeOffRequestDto.FromEntity).ToList();
     }
 
+    public async Task<RequestStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
+    {
+        var all = await _requests.GetAllAsync(cancellationToken);
+        return new RequestStatsDto(
+            Total: all.Count,
+            Pending: all.Count(r => r.Status == RequestStatus.Pending),
+            Approved: all.Count(r => r.Status == RequestStatus.Approved),
+            Rejected: all.Count(r => r.Status == RequestStatus.Rejected),
+            Vacation: all.Count(r => r.Type == LeaveType.Vacation),
+            Sick: all.Count(r => r.Type == LeaveType.Sick),
+            Other: all.Count(r => r.Type == LeaveType.Other));
+    }
+
     public async Task<TimeOffRequestDto> UpdateStatusAsync(
         Guid requestId,
         Guid reviewerId,
