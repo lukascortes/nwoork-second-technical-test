@@ -29,3 +29,11 @@ export interface CreateTimeOffRequest {
   type: TimeOffType;
   reason?: string | null;
 }
+
+export interface VacationBalance {
+  annualAllowance: number;
+  usedDays: number;
+  pendingDays: number;
+  remainingDays: number;
+  projectedRemainingDays: number;
+}

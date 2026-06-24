@@ -17,11 +17,12 @@ public class TimeOffRequestServiceTests
     private readonly Guid _reviewerId = Guid.NewGuid();
 
     private readonly ITimeOffRequestRepository _repo = Substitute.For<ITimeOffRequestRepository>();
+    private readonly IUserRepository _users = Substitute.For<IUserRepository>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly IDateTimeProvider _clock = new FixedClock(Today);
 
     private TimeOffRequestService CreateSut() => new(
-        _repo, _uow, _clock,
+        _repo, _users, _uow, _clock,
         new CreateTimeOffRequestValidator(_clock),
         new UpdateRequestStatusValidator());
 
@@ -76,15 +77,15 @@ public class TimeOffRequestServiceTests
     }
 
     [Fact]
-    public async Task UpdateStatus_ApprovePending_SetsApproved()
+    public async Task UpdateStatus_RejectPending_SetsRejected()
     {
         var entity = TimeOffRequest.Create(_employeeId, Today.AddDays(5), Today.AddDays(6), LeaveType.Vacation, null);
         _repo.GetByIdAsync(entity.Id).Returns(entity);
 
         var result = await CreateSut().UpdateStatusAsync(entity.Id, _reviewerId,
-            new UpdateRequestStatusRequest(RequestStatus.Approved));
+            new UpdateRequestStatusRequest(RequestStatus.Rejected));
 
-        result.Status.Should().Be(RequestStatus.Approved);
+        result.Status.Should().Be(RequestStatus.Rejected);
         await _uow.Received(1).SaveChangesAsync();
     }
 
@@ -108,6 +109,36 @@ public class TimeOffRequestServiceTests
             new UpdateRequestStatusRequest(RequestStatus.Pending));
 
         await act.Should().ThrowAsync<ValidationException>();
+    }
+
+    [Fact]
+    public async Task Approve_VacationExceedingAllowance_ThrowsConflict()
+    {
+        var user = User.Create("e@corp.com", "h", "E", UserRole.Employee, annualVacationDays: 5);
+        var entity = TimeOffRequest.Create(user.Id, Today.AddDays(5), Today.AddDays(12), LeaveType.Vacation, null); // 8 days
+        _repo.GetByIdAsync(entity.Id).Returns(entity);
+        _users.GetByIdAsync(entity.UserId).Returns(user);
+        _repo.GetByUserAsync(entity.UserId).Returns(new List<TimeOffRequest> { entity });
+
+        var act = () => CreateSut().UpdateStatusAsync(entity.Id, _reviewerId,
+            new UpdateRequestStatusRequest(RequestStatus.Approved));
+
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*allowance*");
+    }
+
+    [Fact]
+    public async Task Approve_VacationWithinAllowance_Succeeds()
+    {
+        var user = User.Create("e@corp.com", "h", "E", UserRole.Employee, annualVacationDays: 20);
+        var entity = TimeOffRequest.Create(user.Id, Today.AddDays(5), Today.AddDays(7), LeaveType.Vacation, null); // 3 days
+        _repo.GetByIdAsync(entity.Id).Returns(entity);
+        _users.GetByIdAsync(entity.UserId).Returns(user);
+        _repo.GetByUserAsync(entity.UserId).Returns(new List<TimeOffRequest> { entity });
+
+        var result = await CreateSut().UpdateStatusAsync(entity.Id, _reviewerId,
+            new UpdateRequestStatusRequest(RequestStatus.Approved));
+
+        result.Status.Should().Be(RequestStatus.Approved);
     }
 
     private sealed class FixedClock : IDateTimeProvider

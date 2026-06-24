@@ -6,7 +6,8 @@ import RequestsTable from '../../components/requests/RequestsTable';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import RequestFormContainer from '../../components/requests/RequestForm/RequestFormContainer';
-import type { TimeOffType } from '../../types/requestTypes';
+import VacationBalanceCard from '../../components/requests/VacationBalanceCard';
+import type { TimeOffType, VacationBalance } from '../../types/requestTypes';
 
 import {
   ClockIcon,
@@ -24,16 +25,28 @@ import {
 
 export default function EmployeeDashboard() {
   const [requests, setRequests] = useState<TimeOffRequest[]>([]);
+  const [balance, setBalance] = useState<VacationBalance | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'requests' | 'new'>('requests');
   const [successMessage, setSuccessMessage] = useState('');
 
+  const refreshBalance = async () => {
+    try {
+      setBalance(await timeOffService.getMyBalance());
+    } catch {
+      // balance is non-critical; ignore transient errors
+    }
+  };
+
   useEffect(() => {
-    const loadRequests = async () => {
+    const load = async () => {
       try {
-        const data = await timeOffService.getMyRequests();
-        setRequests(data);
+        const [myRequests] = await Promise.all([
+          timeOffService.getMyRequests(),
+          refreshBalance(),
+        ]);
+        setRequests(myRequests);
       } catch (err) {
         setError('Failed to load your requests');
       } finally {
@@ -41,9 +54,7 @@ export default function EmployeeDashboard() {
       }
     };
 
-
-
-    loadRequests();
+    load();
   }, []);
 
   const handleNewRequest = async (requestData: {
@@ -65,6 +76,7 @@ export default function EmployeeDashboard() {
       setRequests((prev) => [created, ...prev]);
       setSuccessMessage('Request created successfully!');
       setActiveTab('requests');
+      refreshBalance();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error creating request');
     }
@@ -86,6 +98,8 @@ export default function EmployeeDashboard() {
             <p className="text-green-800">{successMessage}</p>
           </div>
         )}
+
+        {balance && <VacationBalanceCard balance={balance} />}
 
       
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">

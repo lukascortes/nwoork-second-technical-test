@@ -114,6 +114,20 @@ public class BackendSmokeTests : IClassFixture<CustomWebApplicationFactory>, IAs
         list.GetArrayLength().Should().BeGreaterThan(0);
     }
 
+    [Fact]
+    public async Task Employee_CanReadVacationBalance()
+    {
+        var client = await AuthenticatedClientAsync(EmployeeEmail, EmployeePassword);
+
+        var response = await client.GetAsync("/api/timeoffrequests/balance");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("annualAllowance").GetInt32().Should().Be(20); // Emma is seeded with 20
+        body.GetProperty("usedDays").GetInt32().Should().Be(0);         // no approved vacation in seed
+        body.GetProperty("remainingDays").GetInt32().Should().Be(20);
+    }
+
     private async Task<HttpClient> AuthenticatedClientAsync(string email, string password)
     {
         var response = await _client.PostAsJsonAsync("/api/auth/login", new { email, password });

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TimeOffManager.Api.Common;
 using TimeOffManager.Application.TimeOffRequests;
+using TimeOffManager.Application.Users;
 
 namespace TimeOffManager.Api.Controllers;
 
@@ -11,8 +12,13 @@ namespace TimeOffManager.Api.Controllers;
 public sealed class TimeOffRequestsController : ControllerBase
 {
     private readonly ITimeOffRequestService _requests;
+    private readonly IUserService _users;
 
-    public TimeOffRequestsController(ITimeOffRequestService requests) => _requests = requests;
+    public TimeOffRequestsController(ITimeOffRequestService requests, IUserService users)
+    {
+        _requests = requests;
+        _users = users;
+    }
 
     /// <summary>Employee submits a new request. Owner and status are assigned server-side.</summary>
     [HttpPost]
@@ -30,6 +36,12 @@ public sealed class TimeOffRequestsController : ControllerBase
     [Authorize(Roles = "Employee")]
     public async Task<ActionResult<IReadOnlyList<TimeOffRequestDto>>> GetMine(CancellationToken cancellationToken)
         => Ok(await _requests.GetMyRequestsAsync(User.GetUserId(), cancellationToken));
+
+    /// <summary>Employee's own vacation-day balance.</summary>
+    [HttpGet("balance")]
+    [Authorize(Roles = "Employee")]
+    public async Task<ActionResult<VacationBalanceDto>> GetMyBalance(CancellationToken cancellationToken)
+        => Ok(await _users.GetVacationBalanceAsync(User.GetUserId(), cancellationToken));
 
     /// <summary>Admin lists every request, newest first.</summary>
     [HttpGet]
