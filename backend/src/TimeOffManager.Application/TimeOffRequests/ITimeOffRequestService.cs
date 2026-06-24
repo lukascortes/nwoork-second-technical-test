@@ -13,6 +13,8 @@ public interface ITimeOffRequestService
 
     Task<IReadOnlyList<TimeOffRequestDto>> GetAllAsync(CancellationToken cancellationToken = default);
 
+    Task<RequestStatsDto> GetStatsAsync(CancellationToken cancellationToken = default);
+
     Task<TimeOffRequestDto> UpdateStatusAsync(
         Guid requestId,
         Guid reviewerId,

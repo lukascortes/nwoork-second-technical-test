@@ -13,6 +13,16 @@ public sealed record CreateTimeOffRequestRequest(
 
 public sealed record UpdateRequestStatusRequest(RequestStatus Status);
 
+/// <summary>Aggregate counts across all requests, for the admin metrics dashboard.</summary>
+public sealed record RequestStatsDto(
+    int Total,
+    int Pending,
+    int Approved,
+    int Rejected,
+    int Vacation,
+    int Sick,
+    int Other);
+
 public sealed record UserSummaryDto(Guid Id, string Email, string FullName, UserRole Role)
 {
     public static UserSummaryDto FromEntity(User user)

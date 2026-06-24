@@ -37,3 +37,13 @@ export interface VacationBalance {
   remainingDays: number;
   projectedRemainingDays: number;
 }
+
+export interface RequestStats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  vacation: number;
+  sick: number;
+  other: number;
+}

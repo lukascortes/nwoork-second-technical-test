@@ -115,6 +115,20 @@ public class BackendSmokeTests : IClassFixture<CustomWebApplicationFactory>, IAs
     }
 
     [Fact]
+    public async Task Admin_CanReadRequestStats()
+    {
+        var client = await AuthenticatedClientAsync(AdminEmail, AdminPassword);
+
+        var response = await client.GetAsync("/api/timeoffrequests/stats");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("total").GetInt32().Should().Be(3);     // seeded requests
+        body.GetProperty("approved").GetInt32().Should().Be(1);
+        body.GetProperty("vacation").GetInt32().Should().Be(2);
+    }
+
+    [Fact]
     public async Task Employee_CanReadVacationBalance()
     {
         var client = await AuthenticatedClientAsync(EmployeeEmail, EmployeePassword);
