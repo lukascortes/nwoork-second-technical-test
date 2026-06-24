@@ -11,11 +11,12 @@ namespace TimeOffManager.Application.UnitTests.Users;
 public class UserServiceTests
 {
     private readonly IUserRepository _users = Substitute.For<IUserRepository>();
+    private readonly ITimeOffRequestRepository _requests = Substitute.For<ITimeOffRequestRepository>();
     private readonly IPasswordHasher _hasher = Substitute.For<IPasswordHasher>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
 
     private UserService CreateSut() => new(
-        _users, _hasher, _uow,
+        _users, _requests, _hasher, _uow,
         new CreateUserRequestValidator(),
         new UpdateUserRequestValidator());
 
@@ -105,5 +106,29 @@ public class UserServiceTests
 
         result.FullName.Should().Be("New Name");
         await _uow.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task GetVacationBalance_CountsApprovedVacationOnly()
+    {
+        var userId = Guid.NewGuid();
+        var user = User.Create("u@corp.com", "h", "U", UserRole.Employee, 20);
+        _users.GetByIdAsync(userId).Returns(user);
+
+        var approvedVacation = TimeOffRequest.Create(userId, new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 5), LeaveType.Vacation, null); // 5
+        approvedVacation.Approve(Guid.NewGuid(), DateTime.UtcNow);
+        var pendingVacation = TimeOffRequest.Create(userId, new DateOnly(2026, 8, 1), new DateOnly(2026, 8, 3), LeaveType.Vacation, null); // 3 pending
+        var approvedSick = TimeOffRequest.Create(userId, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 4), LeaveType.Sick, null); // ignored
+        approvedSick.Approve(Guid.NewGuid(), DateTime.UtcNow);
+
+        _requests.GetByUserAsync(userId).Returns(new List<TimeOffRequest> { approvedVacation, pendingVacation, approvedSick });
+
+        var balance = await CreateSut().GetVacationBalanceAsync(userId);
+
+        balance.AnnualAllowance.Should().Be(20);
+        balance.UsedDays.Should().Be(5);
+        balance.PendingDays.Should().Be(3);
+        balance.RemainingDays.Should().Be(15);
+        balance.ProjectedRemainingDays.Should().Be(12);
     }
 }

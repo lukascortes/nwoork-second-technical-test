@@ -2,12 +2,15 @@ using FluentValidation;
 using TimeOffManager.Application.Common.Exceptions;
 using TimeOffManager.Application.Common.Interfaces;
 using TimeOffManager.Domain.Entities;
+using TimeOffManager.Domain.Enums;
+using TimeOffManager.Domain.ValueObjects;
 
 namespace TimeOffManager.Application.Users;
 
 public sealed class UserService : IUserService
 {
     private readonly IUserRepository _users;
+    private readonly ITimeOffRequestRepository _requests;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IValidator<CreateUserRequest> _createValidator;
@@ -15,12 +18,14 @@ public sealed class UserService : IUserService
 
     public UserService(
         IUserRepository users,
+        ITimeOffRequestRepository requests,
         IPasswordHasher passwordHasher,
         IUnitOfWork unitOfWork,
         IValidator<CreateUserRequest> createValidator,
         IValidator<UpdateUserRequest> updateValidator)
     {
         _users = users;
+        _requests = requests;
         _passwordHasher = passwordHasher;
         _unitOfWork = unitOfWork;
         _createValidator = createValidator;
@@ -103,5 +108,28 @@ public sealed class UserService : IUserService
 
         _users.Remove(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<VacationBalanceDto> GetVacationBalanceAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _users.GetByIdAsync(userId, cancellationToken)
+                   ?? throw new NotFoundException(nameof(User), userId);
+
+        var requests = await _requests.GetByUserAsync(userId, cancellationToken);
+
+        var used = requests
+            .Where(r => r.Type == LeaveType.Vacation && r.Status == RequestStatus.Approved)
+            .Sum(r => r.TotalDays);
+        var pending = requests
+            .Where(r => r.Type == LeaveType.Vacation && r.Status == RequestStatus.Pending)
+            .Sum(r => r.TotalDays);
+
+        var balance = new VacationBalance(user.AnnualVacationDays, used, pending);
+        return new VacationBalanceDto(
+            balance.AnnualAllowance,
+            balance.UsedDays,
+            balance.PendingDays,
+            balance.RemainingDays,
+            balance.ProjectedRemainingDays);
     }
 }

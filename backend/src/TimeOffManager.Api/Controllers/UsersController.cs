@@ -22,6 +22,10 @@ public sealed class UsersController : ControllerBase
     public async Task<ActionResult<UserDto>> GetById(Guid id, CancellationToken cancellationToken)
         => Ok(await _users.GetByIdAsync(id, cancellationToken));
 
+    [HttpGet("{id:guid}/vacation-balance")]
+    public async Task<ActionResult<VacationBalanceDto>> GetVacationBalance(Guid id, CancellationToken cancellationToken)
+        => Ok(await _users.GetVacationBalanceAsync(id, cancellationToken));
+
     [HttpPost]
     public async Task<ActionResult<UserDto>> Create(CreateUserRequest request, CancellationToken cancellationToken)
     {

@@ -3,12 +3,14 @@ using TimeOffManager.Application.Common.Exceptions;
 using TimeOffManager.Application.Common.Interfaces;
 using TimeOffManager.Domain.Entities;
 using TimeOffManager.Domain.Enums;
+using TimeOffManager.Domain.ValueObjects;
 
 namespace TimeOffManager.Application.TimeOffRequests;
 
 public sealed class TimeOffRequestService : ITimeOffRequestService
 {
     private readonly ITimeOffRequestRepository _requests;
+    private readonly IUserRepository _users;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDateTimeProvider _clock;
     private readonly IValidator<CreateTimeOffRequestRequest> _createValidator;
@@ -16,12 +18,14 @@ public sealed class TimeOffRequestService : ITimeOffRequestService
 
     public TimeOffRequestService(
         ITimeOffRequestRepository requests,
+        IUserRepository users,
         IUnitOfWork unitOfWork,
         IDateTimeProvider clock,
         IValidator<CreateTimeOffRequestRequest> createValidator,
         IValidator<UpdateRequestStatusRequest> updateStatusValidator)
     {
         _requests = requests;
+        _users = users;
         _unitOfWork = unitOfWork;
         _clock = clock;
         _createValidator = createValidator;
@@ -76,12 +80,40 @@ public sealed class TimeOffRequestService : ITimeOffRequestService
                      ?? throw new NotFoundException(nameof(TimeOffRequest), requestId);
 
         if (request.Status == RequestStatus.Approved)
+        {
+            await EnsureWithinVacationAllowanceAsync(entity, cancellationToken);
             entity.Approve(reviewerId, _clock.UtcNow);
+        }
         else
+        {
             entity.Reject(reviewerId, _clock.UtcNow);
+        }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return TimeOffRequestDto.FromEntity(entity);
+    }
+
+    /// <summary>Blocks approval of a vacation request that would push the employee
+    /// over their annual allowance.</summary>
+    private async Task EnsureWithinVacationAllowanceAsync(TimeOffRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Type != LeaveType.Vacation)
+            return;
+
+        var user = await _users.GetByIdAsync(request.UserId, cancellationToken);
+        if (user is null)
+            return;
+
+        var siblings = await _requests.GetByUserAsync(request.UserId, cancellationToken);
+        var alreadyUsed = siblings
+            .Where(r => r.Id != request.Id && r.Type == LeaveType.Vacation && r.Status == RequestStatus.Approved)
+            .Sum(r => r.TotalDays);
+
+        var balance = new VacationBalance(user.AnnualVacationDays, alreadyUsed, PendingDays: 0);
+        if (!balance.CanAccommodate(request.TotalDays))
+            throw new ConflictException(
+                $"Approving this request would exceed the employee's annual vacation allowance " +
+                $"({user.AnnualVacationDays} days). Already used: {alreadyUsed}, requested: {request.TotalDays}.");
     }
 }
