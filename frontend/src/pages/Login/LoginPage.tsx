@@ -1,4 +1,5 @@
 import { useLogin } from './useLogin';
+import logo from '../../img/nwoork.png';
 
 export default function LoginPage() {
   const {
@@ -21,7 +22,7 @@ export default function LoginPage() {
             <div className="text-center mb-8">
               <img
                 className="mx-auto"
-                src="../src/img/nwoork.png" 
+                src={logo}
                 alt="logo"
               />
               <h4 className="mt-4 text-2xl font-semibold text-gray-800">
@@ -81,11 +82,16 @@ export default function LoginPage() {
               </div>
 
            
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{error}</div>
+              )}
+
               <button
                 type="submit"
-                className="w-full py-3 px-4 bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-800 hover:to-purple-600 text-white font-medium rounded-lg shadow-md transition duration-300"
+                disabled={loading}
+                className="w-full py-3 px-4 bg-gradient-to-r from-purple-700 to-purple-500 hover:from-purple-800 hover:to-purple-600 text-white font-medium rounded-lg shadow-md transition duration-300 disabled:opacity-60"
               >
-                Log in
+                {loading ? 'Signing in...' : 'Log in'}
               </button>
 
             

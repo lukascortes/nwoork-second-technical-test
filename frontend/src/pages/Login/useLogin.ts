@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../../api/authService';
+import { useAuth } from '../../hooks/useAuth';
 
 export const useLogin = () => {
   const [email, setEmail] = useState('');
@@ -8,6 +8,7 @@ export const useLogin = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,61 +16,16 @@ export const useLogin = () => {
     setError('');
 
     try {
-      console.log('Iniciando petición de login...');
-      const response = await authService.login({ email, password });
-      console.log('Tipo de respuesta:', typeof response);
-      console.log('Respuesta completa:', response);
-      console.log('¿Response es objeto?', response instanceof Object);
-      if (!response) {
-        throw new Error('Respuesta vacía del servidor');
+      const role = await login(email, password);
+      if (!role) {
+        setError('Correo o contraseña inválidos.');
+        return;
       }
-
-      if (typeof response !== 'object') {
-        throw new Error(`Respuesta no es objeto, es: ${typeof response}`);
-      }
-
-      if (!response.token) {
-        throw new Error('Token no encontrado en respuesta');
-      }
-
-      if (!response.role) {
-        throw new Error('Rol no encontrado en respuesta');
-      }
-
-      console.log('Token recibido:', response.token);
-      console.log('Rol recibido:', response.role);
-
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('userRole', response.role);
-      localStorage.setItem('userId', response.id.toString()); 
-
-      console.log('Token almacenado:', localStorage.getItem('token'));
-      console.log('Rol almacenado:', localStorage.getItem('userRole'));
-      console.log('ID de usuario almacenado:', localStorage.getItem('userId'));
-      const targetPath = response.role === 'Admin'
-        ? '/dashboard/admin'
-        : '/dashboard/employee';
-
-      console.log('Redirigiendo a:', targetPath);
-      window.location.href = targetPath;
-    } catch (err) {
-      console.error('Error en login:', err);
-      setError(err instanceof Error ? err.message : 'Login failed');
-      
-      localStorage.removeItem('token');
-      localStorage.removeItem('userRole');
+      navigate(role === 'Admin' ? '/dashboard/admin' : '/dashboard/employee', { replace: true });
     } finally {
       setLoading(false);
     }
   };
 
-  return {
-    email,
-    setEmail,
-    password,
-    setPassword,
-    error,
-    loading,
-    handleSubmit,
-  };
+  return { email, setEmail, password, setPassword, error, loading, handleSubmit };
 };

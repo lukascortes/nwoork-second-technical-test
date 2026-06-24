@@ -1,28 +1,31 @@
 export type TimeOffType = 'Vacation' | 'Sick' | 'Other';
 export type RequestStatus = 'Pending' | 'Approved' | 'Rejected';
 
-// Specific type for time off requests (front end representation)
-export interface TimeOffRequest {
-  id: number;
-  userId: number;
-  startDate: string;
-  endDate: string;
-  type: TimeOffType; 
-  reason?: string;
-  status: RequestStatus; 
-  createdAt: string;
-  user?: {
-    email: string;
-    role: 'Admin' | 'Employee';
-  };
+export interface TimeOffRequestUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: 'Admin' | 'Employee';
 }
 
-// Specific type for creating a time off request (back end representation)
+// Front-end representation of a time-off request (enums come as strings from the API).
+export interface TimeOffRequest {
+  id: string;
+  startDate: string; // ISO date, e.g. "2026-07-01"
+  endDate: string;
+  type: TimeOffType;
+  reason?: string | null;
+  status: RequestStatus;
+  totalDays: number;
+  createdAt: string;
+  reviewedAt?: string | null;
+  user?: TimeOffRequestUser;
+}
+
+// Payload for POST /api/timeoffrequests — the server assigns owner & status.
 export interface CreateTimeOffRequest {
-  userId: number;
   startDate: string;
   endDate: string;
-  type: number; 
+  type: TimeOffType;
   reason?: string | null;
-  status: number; 
 }

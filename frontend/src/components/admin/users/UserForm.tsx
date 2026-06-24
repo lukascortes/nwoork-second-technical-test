@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { User, UserCreateDto, UserUpdateDto } from '../../../types/userTypes';
-import { Role } from '../../../types/userTypes';
+import type { User, UserCreateDto, UserUpdateDto, Role } from '../../../types/userTypes';
 import { userService } from '../../../api/userService';
-import type { UserUpdateDtoRole } from '../../../types/userTypes';
 
 interface UserFormProps {
   user: User | null;
@@ -10,54 +8,69 @@ interface UserFormProps {
   onSuccess: () => void;
 }
 
-export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
-  const [formData, setFormData] = useState<UserCreateDto | UserUpdateDto>({
-    email: '',
-    password: '',
-    role: 'Employee'
-  });
+interface FormState {
+  email: string;
+  fullName: string;
+  password: string;
+  role: Role;
+  annualVacationDays: number;
+}
 
+export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
+  const [formData, setFormData] = useState<FormState>({
+    email: '',
+    fullName: '',
+    password: '',
+    role: 'Employee',
+    annualVacationDays: 20,
+  });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-
 
   useEffect(() => {
     if (user) {
       setFormData({
         email: user.email,
+        fullName: user.fullName,
+        password: '',
         role: user.role,
-        password: ''
+        annualVacationDays: user.annualVacationDays,
       });
     }
   }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'annualVacationDays' ? Number(value) : value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
-    console.log("Role antes del envío:", formData.role);
     try {
       if (user) {
-        const payload: UserCreateDto | UserUpdateDtoRole = {
-          ...formData,
-          role: formData.role === 'Admin' ? 0 : 1
+        const payload: UserUpdateDto = {
+          email: formData.email,
+          fullName: formData.fullName,
+          role: formData.role,
+          annualVacationDays: formData.annualVacationDays,
         };
-         console.log("Payload final:", payload);
-        await userService.update(user.id, payload as unknown as UserUpdateDto);
+        if (formData.password) payload.password = formData.password;
+        await userService.update(user.id, payload);
       } else {
-        await userService.create(formData as UserCreateDto);
-        setFormData({
-          email: '',
-          password: '',
-          role: 'Employee'
-        });
+        const payload: UserCreateDto = {
+          email: formData.email,
+          password: formData.password,
+          fullName: formData.fullName,
+          role: formData.role,
+          annualVacationDays: formData.annualVacationDays,
+        };
+        await userService.create(payload);
       }
       onSuccess();
       onClose();
@@ -83,16 +96,25 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-            {error}
-          </div>
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">{error}</div>
         )}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
+            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
+            <input
+              type="text"
+              id="fullName"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               type="email"
               id="email"
@@ -119,22 +141,33 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
             />
           </div>
 
-          <div className="mb-6">
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-              Role
-            </label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={(e) =>
-                setFormData(prev => ({ ...prev, role: e.target.value as Role }))
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="Admin">Admin</option>
-              <option value="Employee">Employee</option>
-            </select>
-
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="Employee">Employee</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="annualVacationDays" className="block text-sm font-medium text-gray-700 mb-1">Vacation days / year</label>
+              <input
+                type="number"
+                id="annualVacationDays"
+                name="annualVacationDays"
+                min={0}
+                max={365}
+                value={formData.annualVacationDays}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end space-x-3">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { timeOffService } from '../../api/timeOffService';
+import { getApiErrorMessage } from '../../api/errors';
 import type { TimeOffRequest, RequestStatus } from '../../types/requestTypes';
 
 export const useAdminDashboard = () => {
@@ -13,7 +14,7 @@ export const useAdminDashboard = () => {
         const data = await timeOffService.getAllRequests();
         setRequests(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load requests');
+        setError(getApiErrorMessage(err, 'Failed to load requests'));
       } finally {
         setLoading(false);
       }
@@ -22,30 +23,19 @@ export const useAdminDashboard = () => {
     loadRequests();
   }, []);
 
-  const handleStatusChange = async (id: number, status: RequestStatus) => {
+  const handleStatusChange = async (id: string, status: RequestStatus) => {
+    const previous = requests;
+    // optimistic update
+    setRequests((prev) => prev.map((req) => (req.id === id ? { ...req, status } : req)));
+
     try {
-      
-      setRequests(requests.map(req =>
-        req.id === id ? { ...req, status } : req
-      ));
-
-      const updatedRequest = await timeOffService.updateStatus(id, status);
-
-    
-      setRequests(requests.map(req =>
-        req.id === id ? updatedRequest : req
-      ));
+      const updated = await timeOffService.updateStatus(id, status);
+      setRequests((prev) => prev.map((req) => (req.id === id ? updated : req)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update status');
-     
-      setRequests(requests);
+      setError(getApiErrorMessage(err, 'Failed to update status'));
+      setRequests(previous); // rollback
     }
   };
 
-  return {
-    requests,
-    loading,
-    error,
-    handleStatusChange,
-  };
+  return { requests, loading, error, handleStatusChange };
 };
