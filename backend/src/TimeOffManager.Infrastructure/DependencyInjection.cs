@@ -39,17 +39,45 @@ public static class DependencyInjection
                 "Jwt:AccessTokenMinutes must be a positive value.")
             .ValidateOnStart();
 
-        // Messaging (RabbitMQ) + email (SMTP / MailHog)
-        services.AddOptions<RabbitMqOptions>().Bind(configuration.GetSection(RabbitMqOptions.SectionName));
-        services.AddOptions<SmtpOptions>().Bind(configuration.GetSection(SmtpOptions.SectionName));
-        services.AddSingleton<RabbitMqConnection>();
-        services.AddSingleton<IMessagePublisher, RabbitMqMessagePublisher>();
-        services.AddSingleton<IEmailSender, SmtpEmailSender>();
-
-        // The consumer (background worker) is skipped under the integration-test host.
-        if (registerHostedServices)
-            services.AddHostedService<EmailNotificationConsumer>();
+        AddMessaging(services, configuration, registerHostedServices);
+        AddEmail(services, configuration);
 
         return services;
+    }
+
+    /// <summary>Selects the message broker adapter by configuration. Same
+    /// <see cref="IMessagePublisher"/> port — RabbitMQ locally, Azure Service Bus in the cloud.</summary>
+    private static void AddMessaging(IServiceCollection services, IConfiguration configuration, bool registerHostedServices)
+    {
+        var provider = configuration["Messaging:Provider"] ?? "RabbitMq";
+
+        if (provider.Equals("AzureServiceBus", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddOptions<ServiceBusOptions>().Bind(configuration.GetSection(ServiceBusOptions.SectionName));
+            services.AddSingleton<IMessagePublisher, ServiceBusMessagePublisher>();
+            if (registerHostedServices)
+                services.AddHostedService<ServiceBusEmailConsumer>();
+        }
+        else
+        {
+            services.AddOptions<RabbitMqOptions>().Bind(configuration.GetSection(RabbitMqOptions.SectionName));
+            services.AddSingleton<RabbitMqConnection>();
+            services.AddSingleton<IMessagePublisher, RabbitMqMessagePublisher>();
+            if (registerHostedServices)
+                services.AddHostedService<EmailNotificationConsumer>();
+        }
+    }
+
+    /// <summary>Selects the email adapter by configuration: real SMTP (MailHog/SendGrid)
+    /// or a logging sender for the cloud demo when no SMTP is wired up.</summary>
+    private static void AddEmail(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<SmtpOptions>().Bind(configuration.GetSection(SmtpOptions.SectionName));
+
+        var provider = configuration["Email:Provider"] ?? "Smtp";
+        if (provider.Equals("Logging", StringComparison.OrdinalIgnoreCase))
+            services.AddSingleton<IEmailSender, LoggingEmailSender>();
+        else
+            services.AddSingleton<IEmailSender, SmtpEmailSender>();
     }
 }

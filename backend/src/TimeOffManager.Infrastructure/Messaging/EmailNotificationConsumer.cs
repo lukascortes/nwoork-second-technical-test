@@ -6,6 +6,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using TimeOffManager.Application.Common.Interfaces;
 using TimeOffManager.Application.Notifications;
+using TimeOffManager.Infrastructure.Email;
 
 namespace TimeOffManager.Infrastructure.Messaging;
 
@@ -43,7 +44,7 @@ public sealed class EmailNotificationConsumer : BackgroundService
             {
                 var notification = JsonSerializer.Deserialize<RequestReviewedNotification>(ea.Body.Span);
                 if (notification is not null)
-                    await _emailSender.SendAsync(ToEmail(notification), stoppingToken);
+                    await _emailSender.SendAsync(ReviewedRequestEmail.From(notification), stoppingToken);
 
                 _channel!.BasicAck(ea.DeliveryTag, multiple: false);
             }
@@ -55,20 +56,9 @@ public sealed class EmailNotificationConsumer : BackgroundService
         };
 
         _channel.BasicConsume(_options.QueueName, autoAck: false, consumer);
-        _logger.LogInformation("Email notification consumer is listening on '{Queue}'", _options.QueueName);
+        _logger.LogInformation("Email notification consumer (RabbitMQ) is listening on '{Queue}'", _options.QueueName);
 
         return Task.CompletedTask;
-    }
-
-    private static EmailMessage ToEmail(RequestReviewedNotification n)
-    {
-        var subject = $"Your {n.RequestType.ToLowerInvariant()} request was {n.Status.ToLowerInvariant()}";
-        var body =
-            $"Hi {n.RecipientName},\n\n" +
-            $"Your {n.RequestType.ToLowerInvariant()} request from {n.StartDate:yyyy-MM-dd} to {n.EndDate:yyyy-MM-dd} " +
-            $"has been {n.Status.ToLowerInvariant()}.\n\n" +
-            "— TimeOff Manager";
-        return new EmailMessage(n.RecipientEmail, subject, body);
     }
 
     public override void Dispose()
