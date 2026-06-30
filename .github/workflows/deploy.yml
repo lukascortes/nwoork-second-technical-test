@@ -1,0 +1,58 @@
+name: Deploy API
+
+# Manual trigger. Builds the API image, pushes it to GHCR, and rolls it out to
+# Azure Container Apps. Requires these repo secrets (see DEPLOY.md):
+#   AZURE_CREDENTIALS     – service-principal JSON from `az ad sp create-for-rbac ... --sdk-auth`
+#   AZURE_RESOURCE_GROUP  – the resource group holding the container app
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag'
+        default: 'latest'
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/timeoff-api
+
+jobs:
+  build-and-deploy:
+    name: Build, push & deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.event.inputs.tag }}
+            ${{ env.IMAGE }}:${{ github.sha }}
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Roll out to Container Apps
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az containerapp update \
+              --name timeoff-api \
+              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+              --image ${{ env.IMAGE }}:${{ github.sha }}
